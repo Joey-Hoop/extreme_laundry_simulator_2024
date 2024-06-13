@@ -1,12 +1,14 @@
 import tkinter as tk
 from tkinter import messagebox
 import threading
-import jdeu_logic_module  # Ensure this is in the same directory
+import jdeu_logic_module_clean_edition  # Ensure this is in the same directory
 import colorsys
 
-def process_tickets_thread(url, username, token, project_key, start_range, end_range):
+
+def process_tickets_thread(url: str, username: str, token: str, project_key: str, start_range: str, end_range: str):
     try:
-        filename = jdeu_logic_module.process_tickets(url, username, token, project_key, start_range, end_range)
+        filename = jdeu_logic_module_clean_edition.process_tickets(url, username, token, project_key, start_range,
+                                                                   end_range)
         messagebox.showinfo("Success", f"Data written to {filename}")
     except Exception as e:
         messagebox.showerror("Error", str(e))
@@ -16,13 +18,15 @@ def process_tickets_thread(url, username, token, project_key, start_range, end_r
         warning_label.config(text="")
         start_color_cycle()  # Restart the color cycle
 
+
 def handle_button_click():
     # Disable the button and set its color to gray
     process_button.config(state=tk.DISABLED, bg="gray", activebackground="gray")
     root.after_cancel(color_cycle_id)  # Stop the color cycling
-    
+
     # Update warning message
-    warning_label.config(text="DO NOT CLOSE THIS WINDOW\nTHIS MAY TAKE A WHILE\nSEE CONSOLE FOR PROCESS OUTPUT", fg="red")
+    warning_label.config(text="DO NOT CLOSE THIS WINDOW\nTHIS MAY TAKE A WHILE\nSEE CONSOLE FOR PROCESS OUTPUT",
+                         fg="red")
 
     # Start the process in a new thread
     url = url_entry.get()
@@ -32,7 +36,9 @@ def handle_button_click():
     start_range = int(start_range_entry.get())
     end_range = int(end_range_entry.get())
 
-    threading.Thread(target=process_tickets_thread, args=(url, username, token, project_key, start_range, end_range), daemon=True).start()
+    threading.Thread(target=process_tickets_thread, args=(url, username, token, project_key, start_range, end_range),
+                     daemon=True).start()
+
 
 def cycle_colors():
     hue = 0
@@ -45,10 +51,12 @@ def cycle_colors():
             hue = 0
         yield
 
+
 def start_color_cycle():
     global color_cycle, color_cycle_id
     color_cycle = cycle_colors()
     color_cycle_id = root.after(50, lambda: update_color())
+
 
 def update_color():
     global color_cycle_id
@@ -57,6 +65,7 @@ def update_color():
         color_cycle_id = root.after(50, lambda: update_color())
     except StopIteration:
         color_cycle_id = None
+
 
 root = tk.Tk()
 root.title("Jira Data Extraction Utility")

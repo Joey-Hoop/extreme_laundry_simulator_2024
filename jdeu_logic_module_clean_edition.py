@@ -9,13 +9,15 @@ import concurrent.futures
 # Initialize colorama
 init()
 
+
 def safe_str(obj):
     try:
         return str(obj)
     except UnicodeEncodeError:
         return obj.encode('ascii', 'replace').decode('ascii')
 
-def convert_time_to_seconds(time_str):
+
+def convert_time_to_seconds(time_str) -> int:
     # A work day is 8 hours and a work week is 5 days
     time_units = {'w': 5 * 8 * 3600, 'd': 8 * 3600, 'h': 3600, 'm': 60, 's': 1}
     total_seconds = 0
@@ -24,8 +26,12 @@ def convert_time_to_seconds(time_str):
         total_seconds += int(amount) * time_units[unit]
     return total_seconds
 
+
 def initialize_jira_connection(url, username, token):
-    return Jira(url=url, username=username, token=token)  # !! IMPORTANT !! --- change to token=token when using with SE2 --- (and password=token for Jira Cloud)
+    return Jira(url=url, username=username,
+                token=token)  # !! IMPORTANT !! --- change to token=token when using with SE2 --- (and password=token
+    # for Jira Cloud)
+
 
 def fetch_latest_ticket(jira, project_key):
     jql_query = f'project = {project_key} ORDER BY created DESC'
@@ -41,21 +47,23 @@ def fetch_latest_ticket(jira, project_key):
         traceback.print_exc()
         return None
 
-def fetch_issues_concurrently(jira, project_key, start_range, end_range, max_workers=10):
+
+def fetch_issues_concurrently(jira, project_key, start_range, end_range, max_workers=10) -> list:
     issues_list = []
 
-    def fetch_issue(issue_key):
+    def fetch_issue(jira_issue_key):
         try:
-            issue = jira.issue(issue_key, expand='changelog')
-            print(issue['key'], issue['fields']['summary'])
-            return issue
+            jira_issue = jira.issue(jira_issue_key, expand='changelog')
+            print(jira_issue['key'], jira_issue['fields']['summary'])
+            return jira_issue
         except Exception as e:
-            print(Style.BRIGHT + Fore.YELLOW + f"Could not fetch issue {issue_key}. Error: {e}" + Style.RESET_ALL)
+            print(Style.BRIGHT + Fore.YELLOW + f"Could not fetch issue {jira_issue_key}. Error: {e}" + Style.RESET_ALL)
             # traceback.print_exc()
             return None
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_issue_key = {executor.submit(fetch_issue, f"{project_key}-{i}"): f"{project_key}-{i}" for i in range(start_range, end_range + 1)}
+        future_to_issue_key = {executor.submit(fetch_issue, f"{project_key}-{i}"): f"{project_key}-{i}" for i in
+                               range(start_range, end_range + 1)}
         for future in concurrent.futures.as_completed(future_to_issue_key):
             issue = future.result()
             if issue:
@@ -72,12 +80,15 @@ def fetch_issues_concurrently(jira, project_key, start_range, end_range, max_wor
         status = issue['fields']['status'].get('name', 'No Status Found')
         # Attempt to print some changelog information for debugging
         if 'changelog' in issue:
-            print(f"Issue Key: {issue_key}, Summary: {summary}, Status: {status}, Changelog Entries: {len(issue['changelog']['histories'])}")
+            print(
+                f"Issue Key: {issue_key}, Summary: {summary}, Status: {status}, Changelog Entries: "
+                f"{len(issue['changelog']['histories'])}")
         else:
             print(f"Issue Key: {issue_key}, Summary: {summary}, Status: {status}, Changelog: Not Retrieved")
     # ---- END DEBUG ----
 
     return issues_list
+
 
 def calculate_working_hours(start_date, end_date):
     weekdays = 0
@@ -88,8 +99,8 @@ def calculate_working_hours(start_date, end_date):
         current_date += timedelta(days=1)
     return weekdays * 8  # Assuming 8 working hours per day
 
-def write_issues_to_csv(jira, issues_list, filename):
 
+def write_issues_to_csv(jira, issues_list, filename):
     max_labels = 0
     for issue in issues_list:
         labels = issue['fields'].get('labels', [])
@@ -118,7 +129,7 @@ def write_issues_to_csv(jira, issues_list, filename):
         ]
 
         # Append label headers
-        label_headers = [f'Label {i+1}' for i in range(max_labels)]
+        label_headers = [f'Label {i + 1}' for i in range(max_labels)]
         headers.extend(label_headers)
 
         # Append the Complexity header
@@ -157,8 +168,6 @@ def write_issues_to_csv(jira, issues_list, filename):
             done_completion_seconds = 0  # Initialize as 0 for issues that aren't done
             closed_completion_seconds = 0  # Initialize as 0 for issues that aren't closed
 
-            first_worklog_created = None
-            first_worklog_timestamp = 0  # Initialize to 0
             done_timestamp = 0  # Initialize to 0
 
             status_timestamps = {
@@ -211,7 +220,8 @@ def write_issues_to_csv(jira, issues_list, filename):
                 first_worklog = min(worklogs, key=lambda w: w['started'])
                 first_worklog_created = first_worklog['started']
                 first_worklog_datetime = datetime.strptime(first_worklog_created, '%Y-%m-%dT%H:%M:%S.%f%z').astimezone()
-                first_worklog_timestamp = int(first_worklog_datetime.timestamp())  # Convert first_worklog_datetime to Unix timestamp
+                first_worklog_timestamp = int(
+                    first_worklog_datetime.timestamp())  # Convert first_worklog_datetime to Unix timestamp
 
                 for worklog in worklogs:
                     comment = worklog.get('comment', "No worklog comment.")
@@ -224,7 +234,7 @@ def write_issues_to_csv(jira, issues_list, filename):
                     time_spent_days = time_spent_seconds / (3600 * 8)
                     time_spent_weeks = time_spent_seconds / (3600 * 8 * 5)
                     time_spent_months = time_spent_seconds / (3600 * 160)
-                    time_spent_years = time_spent_hours / (2000)
+                    time_spent_years = time_spent_hours / 2000
 
                     inactive = "Yes" if "[X]" in author_name else "No"
 
@@ -238,44 +248,47 @@ def write_issues_to_csv(jira, issues_list, filename):
                     if first_worklog_created and done_status_set_on:
                         if first_worklog_datetime <= done_datetime:
                             new_completion_interval_seconds = (done_datetime - first_worklog_datetime).total_seconds()
-                            new_completion_interval_work_hours = calculate_working_hours(first_worklog_datetime, done_datetime)
+                            new_completion_interval_work_hours = calculate_working_hours(first_worklog_datetime,
+                                                                                         done_datetime)
                         else:
-                            faulty_nci = "Yes"  # Set FaultyNCI to "Yes" if done_datetime occurs before first_worklog_datetime
+                            # Set FaultyNCI to "Yes" if done_datetime occurs before first_worklog_datetime
+                            faulty_nci = "Yes"
 
                     labels = issue['fields'].get('labels', [])
                     # Prepare label fields: Fill in labels and add empty strings for missing labels
                     label_fields = labels + [''] * (max_labels - len(labels))
 
                     row = [
-                        sort_id, safe_str(issue_key), safe_str(summary), safe_str(status), safe_str(priority), safe_str(labels),
-                        safe_str(comment), safe_str(author_name), safe_str(time_spent),
-                        time_spent_seconds, time_spent_hours, time_spent_days, time_spent_weeks,
-                        time_spent_months, time_spent_years, inactive, safe_str(worklog_created),
-                        safe_str(first_worklog_created),  # Add the FirstWorkLogTimeDate field
-                        datetime.now().isoformat(), safe_str(created), safe_str(done_status_set_on),
-                        done_completion_seconds, done_completion_hours, safe_str(closed_status_set_on),
-                        closed_completion_seconds, closed_completion_hours,
-                        new_completion_interval_seconds, new_completion_interval_work_hours,
-                        faulty_nci,  # Include the FaultyNCI value in the row data
-                        worklogs_exist,  # Include the WORKLOGS_EXIST value in the row data
-                        safe_str(status_timestamps['Ready for Documentation']),
-                        safe_str(status_timestamps['In Documentation']),
-                        safe_str(status_timestamps['Doc Review']),
-                        safe_str(status_timestamps['Ready for Development']),
-                        safe_str(status_timestamps['In Development']),
-                        safe_str(status_timestamps['Development Review']),
-                        safe_str(status_timestamps['Ready for Test']),
-                        safe_str(status_timestamps['In Test']),
-                        safe_str(status_timestamps['Ready for Integration']),
-                        safe_str(status_timestamps['In Integration']),
-                        safe_str(status_timestamps['Ready for Cyber']),
-                        safe_str(status_timestamps['In Cyber']),
-                        safe_str(status_timestamps['Cyber Review']),
-                        safe_str(status_timestamps['Done']),
-                        safe_str(status_timestamps['Ready for ERB Review']),
-                        safe_str(status_timestamps['Ready for CCB Review']),
-                        safe_str(status_timestamps['Ready for Release'])
-                    ] + label_fields + [safe_str(complexity)]  # Append the Complexity field to the row
+                              sort_id, safe_str(issue_key), safe_str(summary), safe_str(status), safe_str(priority),
+                              safe_str(labels),
+                              safe_str(comment), safe_str(author_name), safe_str(time_spent),
+                              time_spent_seconds, time_spent_hours, time_spent_days, time_spent_weeks,
+                              time_spent_months, time_spent_years, inactive, safe_str(worklog_created),
+                              safe_str(first_worklog_created),  # Add the FirstWorkLogTimeDate field
+                              datetime.now().isoformat(), safe_str(created), safe_str(done_status_set_on),
+                              done_completion_seconds, done_completion_hours, safe_str(closed_status_set_on),
+                              closed_completion_seconds, closed_completion_hours,
+                              new_completion_interval_seconds, new_completion_interval_work_hours,
+                              faulty_nci,  # Include the FaultyNCI value in the row data
+                              worklogs_exist,  # Include the WORKLOGS_EXIST value in the row data
+                              safe_str(status_timestamps['Ready for Documentation']),
+                              safe_str(status_timestamps['In Documentation']),
+                              safe_str(status_timestamps['Doc Review']),
+                              safe_str(status_timestamps['Ready for Development']),
+                              safe_str(status_timestamps['In Development']),
+                              safe_str(status_timestamps['Development Review']),
+                              safe_str(status_timestamps['Ready for Test']),
+                              safe_str(status_timestamps['In Test']),
+                              safe_str(status_timestamps['Ready for Integration']),
+                              safe_str(status_timestamps['In Integration']),
+                              safe_str(status_timestamps['Ready for Cyber']),
+                              safe_str(status_timestamps['In Cyber']),
+                              safe_str(status_timestamps['Cyber Review']),
+                              safe_str(status_timestamps['Done']),
+                              safe_str(status_timestamps['Ready for ERB Review']),
+                              safe_str(status_timestamps['Ready for CCB Review']),
+                              safe_str(status_timestamps['Ready for Release'])
+                          ] + label_fields + [safe_str(complexity)]  # Append the Complexity field to the row
                     # Append the DEBUG_FirstWorklogTimestamp and DEBUG_DoneTimestamp values
                     row.append(first_worklog_timestamp)
                     row.append(done_timestamp)
@@ -288,32 +301,33 @@ def write_issues_to_csv(jira, issues_list, filename):
                 done_completion_hours = done_completion_seconds / 3600 if done_completion_seconds else 0
                 closed_completion_hours = closed_completion_seconds / 3600 if closed_completion_seconds else 0
                 row = [
-                    sort_id, safe_str(issue_key), safe_str(summary), safe_str(status), safe_str(priority), safe_str(labels),
-                    'No worklog comment.', '', '', '', '', '', '', '', '', 'No', '',
-                    '',  # Add an empty string for FirstWorkLogTimeDate when there are no worklogs
-                    datetime.now().isoformat(), safe_str(created), safe_str(done_status_set_on),
-                    done_completion_seconds, done_completion_hours, safe_str(closed_status_set_on),
-                    closed_completion_seconds, closed_completion_hours, 0, 0,
-                    'No',  # Set FaultyNCI to "No" for issues without worklogs
-                    worklogs_exist,  # Include the WORKLOGS_EXIST value in the row data
-                    safe_str(status_timestamps['Ready for Documentation']),
-                    safe_str(status_timestamps['In Documentation']),
-                    safe_str(status_timestamps['Doc Review']),
-                    safe_str(status_timestamps['Ready for Development']),
-                    safe_str(status_timestamps['In Development']),
-                    safe_str(status_timestamps['Development Review']),
-                    safe_str(status_timestamps['Ready for Test']),
-                    safe_str(status_timestamps['In Test']),
-                    safe_str(status_timestamps['Ready for Integration']),
-                    safe_str(status_timestamps['In Integration']),
-                    safe_str(status_timestamps['Ready for Cyber']),
-                    safe_str(status_timestamps['In Cyber']),
-                    safe_str(status_timestamps['Cyber Review']),
-                    safe_str(status_timestamps['Done']),
-                    safe_str(status_timestamps['Ready for ERB Review']),
-                    safe_str(status_timestamps['Ready for CCB Review']),
-                    safe_str(status_timestamps['Ready for Release'])
-                ] + [''] * max_labels + [safe_str(complexity)]  # Append the Complexity field to the row
+                          sort_id, safe_str(issue_key), safe_str(summary), safe_str(status), safe_str(priority),
+                          safe_str(labels),
+                          'No worklog comment.', '', '', '', '', '', '', '', '', 'No', '',
+                          '',  # Add an empty string for FirstWorkLogTimeDate when there are no worklogs
+                          datetime.now().isoformat(), safe_str(created), safe_str(done_status_set_on),
+                          done_completion_seconds, done_completion_hours, safe_str(closed_status_set_on),
+                          closed_completion_seconds, closed_completion_hours, 0, 0,
+                          'No',  # Set FaultyNCI to "No" for issues without worklogs
+                          worklogs_exist,  # Include the WORKLOGS_EXIST value in the row data
+                          safe_str(status_timestamps['Ready for Documentation']),
+                          safe_str(status_timestamps['In Documentation']),
+                          safe_str(status_timestamps['Doc Review']),
+                          safe_str(status_timestamps['Ready for Development']),
+                          safe_str(status_timestamps['In Development']),
+                          safe_str(status_timestamps['Development Review']),
+                          safe_str(status_timestamps['Ready for Test']),
+                          safe_str(status_timestamps['In Test']),
+                          safe_str(status_timestamps['Ready for Integration']),
+                          safe_str(status_timestamps['In Integration']),
+                          safe_str(status_timestamps['Ready for Cyber']),
+                          safe_str(status_timestamps['In Cyber']),
+                          safe_str(status_timestamps['Cyber Review']),
+                          safe_str(status_timestamps['Done']),
+                          safe_str(status_timestamps['Ready for ERB Review']),
+                          safe_str(status_timestamps['Ready for CCB Review']),
+                          safe_str(status_timestamps['Ready for Release'])
+                      ] + [''] * max_labels + [safe_str(complexity)]  # Append the Complexity field to the row
 
                 # Append the DEBUG_FirstWorklogTimestamp and DEBUG_DoneTimestamp values
                 row.append(0)  # Set DEBUG_FirstWorklogTimestamp to 0 for issues without worklogs
@@ -330,8 +344,8 @@ def write_issues_to_csv(jira, issues_list, filename):
 
     print(f"Data successfully written to {filename}")
 
-def process_tickets(url, username, token, project_key, start_range, end_range):
 
+def process_tickets(url, username, token, project_key, start_range, end_range):
     jira = initialize_jira_connection(url, username, token)
 
     print(f"DEBUG: URL = {url}")
