@@ -9,6 +9,8 @@ import concurrent.futures
 # Initialize colorama
 init()
 
+# Label these types once we figure out what obj and obj.encode types are
+
 
 def safe_str(obj):
     try:
@@ -16,6 +18,8 @@ def safe_str(obj):
     except UnicodeEncodeError:
         return obj.encode('ascii', 'replace').decode('ascii')
 
+
+# The time_str is most likely a datetime type, but I will confirm it is not a generic string before labeling
 
 def convert_time_to_seconds(time_str) -> int:
     # A work day is 8 hours and a work week is 5 days
@@ -27,13 +31,13 @@ def convert_time_to_seconds(time_str) -> int:
     return total_seconds
 
 
-def initialize_jira_connection(url, username, token):
+def initialize_jira_connection(url: str, username: str, token: str):
     return Jira(url=url, username=username,
                 token=token)  # !! IMPORTANT !! --- change to token=token when using with SE2 --- (and password=token
     # for Jira Cloud)
 
 
-def fetch_latest_ticket(jira, project_key):
+def fetch_latest_ticket(jira, project_key: str):
     jql_query = f'project = {project_key} ORDER BY created DESC'
     try:
         tickets = jira.jql(jql_query, limit=1)['issues']
@@ -47,10 +51,13 @@ def fetch_latest_ticket(jira, project_key):
         traceback.print_exc()
         return None
 
+# Need to check if start+end range variables are ints or strings, then label
 
-def fetch_issues_concurrently(jira, project_key, start_range, end_range, max_workers=10) -> list:
+
+def fetch_issues_concurrently(jira, project_key: str, start_range, end_range, max_workers=10) -> list:
     issues_list = []
 
+    # Make sure jira_issue_key is a string before labelling, it could have its own special type
     def fetch_issue(jira_issue_key):
         try:
             jira_issue = jira.issue(jira_issue_key, expand='changelog')
@@ -70,6 +77,7 @@ def fetch_issues_concurrently(jira, project_key, start_range, end_range, max_wor
                 issues_list.append(issue)
 
     # Sort the issues_list based on the issue key
+    # Later we will sort alphabetically + numerically (primarily by alphabet) by issue key
     issues_list.sort(key=lambda x: x['key'])
 
     # ---- DEBUG ----
@@ -90,7 +98,7 @@ def fetch_issues_concurrently(jira, project_key, start_range, end_range, max_wor
     return issues_list
 
 
-def calculate_working_hours(start_date, end_date):
+def calculate_working_hours(start_date: datetime, end_date: datetime) -> int:
     weekdays = 0
     current_date = start_date
     while current_date <= end_date:
@@ -101,6 +109,7 @@ def calculate_working_hours(start_date, end_date):
 
 
 def write_issues_to_csv(jira, issues_list, filename):
+    # Find the highest number of labels out of all the issues
     max_labels = 0
     for issue in issues_list:
         labels = issue['fields'].get('labels', [])
@@ -203,6 +212,7 @@ def write_issues_to_csv(jira, issues_list, filename):
                     if done_status_set_on and closed_status_set_on:
                         break
 
+                # Will check if these are needed, then delete if unnecessary
                 if done_status_set_on:
                     done_datetime = datetime.strptime(done_status_set_on, '%Y-%m-%dT%H:%M:%S.%f%z').astimezone()
                     done_completion_seconds = (done_datetime - created_datetime).total_seconds()
@@ -337,6 +347,7 @@ def write_issues_to_csv(jira, issues_list, filename):
                 print(Style.BRIGHT + Fore.GREEN + f"\nWriting to CSV: {row}\n")  # Print for issues without worklogs
 
         # Sort the rows based on the Sort_ID column (first column) in ascending order
+        # We will fix this sorting to be Alphabetical+numerical based on issue key later
         sorted_rows = sorted(rows, key=lambda x: x[0])
 
         # Write the sorted rows to the CSV file
@@ -345,7 +356,7 @@ def write_issues_to_csv(jira, issues_list, filename):
     print(f"Data successfully written to {filename}")
 
 
-def process_tickets(url, username, token, project_key, start_range, end_range):
+def process_tickets(url: str, username: str, token: str, project_key: str, start_range, end_range) -> str:
     jira = initialize_jira_connection(url, username, token)
 
     print(f"DEBUG: URL = {url}")
