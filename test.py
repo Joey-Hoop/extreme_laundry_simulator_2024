@@ -6,6 +6,7 @@ import time
 
 # THIS FILE IS AN EXAMPLE!!
 # This file does not affect the running program or gui in any way
+CPU_COUNT = multiprocessing.cpu_count()
 
 def example(min: int, max: int):
     theRange = max - min
@@ -20,27 +21,27 @@ def example2():
 
 # In Parallel
 if __name__ == '__main__':
-    CPU_COUNT = multiprocessing.cpu_count()
+    # CPU_COUNT = multiprocessing.cpu_count()
     print("CPU count: " + str(CPU_COUNT))
-    # start = time.clock_gettime(time.CLOCK_REALTIME)
+    print("In Parallel:")
+
     processes = []
     for i in range(CPU_COUNT):
         processes.append(Process(target=example, args=(i * 100,(i*100)+100)))
+
     start = time.clock_gettime(time.CLOCK_REALTIME)
+
     for p in processes:
         p.start()
     for p in processes:
         p.join()
     stop = time.clock_gettime(time.CLOCK_REALTIME)
+
+    print('Time: ', stop - start)  
+    # In Sequence:
+    print("\nIn Sequence:")
+    start = time.clock_gettime(time.CLOCK_REALTIME)
+    example(0,100 * CPU_COUNT)
+    stop = time.clock_gettime(time.CLOCK_REALTIME)
     print('Time: ', stop - start)  
 
-
-
-'''
-# In Sequence:
-
-start = time.clock_gettime(time.CLOCK_REALTIME)
-example(0,400)
-stop = time.clock_gettime(time.CLOCK_REALTIME)
-print('Time: ', stop - start)  
-'''
