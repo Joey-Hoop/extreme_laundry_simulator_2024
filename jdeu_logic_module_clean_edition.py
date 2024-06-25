@@ -108,7 +108,7 @@ def calculate_working_hours(start_date: datetime, end_date: datetime) -> int:
     return weekdays * 8  # Assuming 8 working hours per day
 
 
-def write_issues_to_csv(jira, issues_list, filename):
+def write_issues_to_csv(jira, issues_list, filename, lock):
     # Find the highest number of labels out of all the issues
     max_labels = 0
     for issue in issues_list:
@@ -119,44 +119,54 @@ def write_issues_to_csv(jira, issues_list, filename):
     print(f"Starting to write data to {filename}...")
     with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
         csv_writer = csv.writer(csvfile)
-        # Headers for the CSV file
-        headers = [
-            'Sort_ID', 'Issue Key', 'Summary', 'Status', 'Priority', 'Labels', 'Worklog Comment', 'Author',
-            'Time Spent', 'Time Spent Converted', 'Work Hours', 'Work Days', 'Work Weeks',
-            'Work Months', 'Work Years', 'Inactive', 'Worklog Created', 'FirstWorkLogTimeDate', 'Data Extracted Time',
-            'Created', 'Done Status Set On', 'Done Completion Seconds', 'Done Completion Hours',
-            'Closed Status Set On', 'Closed Completion Seconds', 'Closed Completion Hours',
-            'New_Completion_Interval_Seconds', 'New_Completion_Interval_Work_Hours',
-            'FaultyNCI', 'WORKLOGS_EXIST',  # Add the new column
-            'Ready for Documentation', 'In Documentation', 'Doc Review',
-            'Ready for Development', 'In Development', 'Development Review',
-            'Ready for Test', 'In Test',
-            'Ready for Integration', 'In Integration',
-            'Ready for Cyber', 'In Cyber', 'Cyber Review',
-            'Done',
-            'Ready for ERB Review', 'Ready for CCB Review', 'Ready for Release'
-        ]
+        if __name__ == '__main__':
+            # Headers for the CSV file
+            headers = [
+                'Sort_ID', 'Issue Key', 'Summary', 'Status', 'Priority', 'Labels', 'Worklog Comment', 'Author',
+                'Time Spent', 'Time Spent Converted', 'Work Hours', 'Work Days', 'Work Weeks',
+                'Work Months', 'Work Years', 'Inactive', 'Worklog Created', 'FirstWorkLogTimeDate', 'Data Extracted Time',
+                'Created', 'Done Status Set On', 'Done Completion Seconds', 'Done Completion Hours',
+                'Closed Status Set On', 'Closed Completion Seconds', 'Closed Completion Hours',
+                'New_Completion_Interval_Seconds', 'New_Completion_Interval_Work_Hours',
+                'FaultyNCI', 'WORKLOGS_EXIST',  # Add the new column
+                'Ready for Documentation', 'In Documentation', 'Doc Review',
+                'Ready for Development', 'In Development', 'Development Review',
+                'Ready for Test', 'In Test',
+                'Ready for Integration', 'In Integration',
+                'Ready for Cyber', 'In Cyber', 'Cyber Review',
+                'Done',
+                'Ready for ERB Review', 'Ready for CCB Review', 'Ready for Release'
+            ]
 
-        # Append label headers
-        label_headers = [f'Label {i + 1}' for i in range(max_labels)]
-        headers.extend(label_headers)
+            # Append label headers
+            label_headers = [f'Label {i + 1}' for i in range(max_labels)]
+            headers.extend(label_headers)
 
-        # Append the Complexity header
-        headers.append('Complexity')
+            # Append the Complexity header
+            headers.append('Complexity')
 
-        # Append the DEBUG_FirstWorklogTimestamp and DEBUG_DoneTimestamp headers
-        headers.append('DEBUG_FirstWorklogTimestamp')
-        headers.append('DEBUG_DoneTimestamp')
+            # Append the DEBUG_FirstWorklogTimestamp and DEBUG_DoneTimestamp headers
+            headers.append('DEBUG_FirstWorklogTimestamp')
+            headers.append('DEBUG_DoneTimestamp')
 
-        print(f"\nStrap in, here we go...\n")
-
-        csv_writer.writerow(headers)
-        print(f"\nCSV Headers: {headers}\n")
+            print(f"\nStrap in, here we go...\n")
+            lock.acquire()
+            try:
+                csv_writer.writerow(headers)
+            finally:
+                lock.release()
+            
+            print(f"\nCSV Headers: {headers}\n")
 
         rows = []  # Create a list to store all the rows
 
         for index, issue in enumerate(issues_list, start=1):
-            print(f"\nProcessing issue {issue['key']}...\n")
+            lock.acquire()
+            try:
+                print(f"\nProcessing issue {issue['key']}...\n")
+            finally:
+                lock.release()
+            
             sort_id = str(index).zfill(8)  # Pad the sort_id with leading zeros to ensure a consistent length
             issue_key = issue['key']
             summary = issue['fields']['summary']
@@ -351,36 +361,41 @@ def write_issues_to_csv(jira, issues_list, filename):
         sorted_rows = sorted(rows, key=lambda x: x[0])
 
         # Write the sorted rows to the CSV file
-        csv_writer.writerows(sorted_rows)
+        lock.acquire()
+        try:
+            csv_writer.writerows(sorted_rows)
+        finally:
+            lock.release()
+        
 
     print(f"Data successfully written to {filename}")
 
 
-def process_tickets(url: str, username: str, token: str, project_key: str, start_range, end_range) -> str:
+def process_tickets(url: str, username: str, token: str, project_key: str, start_range, end_range, filename: str, lock) -> str:
     jira = initialize_jira_connection(url, username, token)
-
-    print(f"DEBUG: URL = {url}")
-    print(f"DEBUG: Username = {username}")
-    print(f"DEBUG: Token = {token}")
-    print(f"DEBUG: Project Key = {project_key}")
+    if __name__ == '__main__':
+        print(f"DEBUG: URL = {url}")
+        print(f"DEBUG: Username = {username}")
+        print(f"DEBUG: Token = {token}")
+        print(f"DEBUG: Project Key = {project_key}")
     print(f"DEBUG: Start Range = {start_range}")
     print(f"DEBUG: End Range = {end_range}")
-
-    last_ticket = fetch_latest_ticket(jira, project_key)
+    if __name__ == '__main__':
+        last_ticket = fetch_latest_ticket(jira, project_key)
     if last_ticket:
         print(f"DEBUG: Last Ticket = {last_ticket['key']}")
 
     issues_list = fetch_issues_concurrently(jira, project_key, start_range, end_range)
-    current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f'jira_data_{current_time}.csv'
+    
 
     # Print bold red text
-    print(Style.BRIGHT + Fore.GREEN + f"[ Creating {filename} ]")
-    print(Style.BRIGHT + Fore.RED + "[ !!! THIS IS GOING TO TAKE A WHILE !!! ]" + Style.RESET_ALL)
-    print(Style.BRIGHT + Fore.RED + "[ !!! -- DO NOT CLOSE THIS WINDOW -- !!! ]" + Style.RESET_ALL)
-
-    write_issues_to_csv(jira, issues_list, filename)
+    if __name__ == '__main__':
+        print(Style.BRIGHT + Fore.GREEN + f"[ Creating {filename} ]")
+        print(Style.BRIGHT + Fore.RED + "[ !!! THIS IS GOING TO TAKE A WHILE !!! ]" + Style.RESET_ALL)
+        print(Style.BRIGHT + Fore.RED + "[ !!! -- DO NOT CLOSE THIS WINDOW -- !!! ]" + Style.RESET_ALL)
+    
+    write_issues_to_csv(jira, issues_list, filename, lock)
 
     print(f"Data written to {filename}")
 
-    return filename
+    return
