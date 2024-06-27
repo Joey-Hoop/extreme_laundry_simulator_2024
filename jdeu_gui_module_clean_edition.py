@@ -26,8 +26,6 @@ from datetime import datetime
 CPU_COUNT = multiprocessing.cpu_count()
 if __name__ == '__main__':
     lock = Lock()
-    current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f'jira_data_{current_time}.csv'
 
 
     def process_tickets_thread(url: str, username: str, token: str, project_key: str, start_range: int, end_range: int):
@@ -46,6 +44,8 @@ if __name__ == '__main__':
         Returns:
         None
         """
+        current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'jira_data_{current_time}.csv'
         try:
             processes = []
             # For now, we assume that end_range > start_range, but we can add a failsafe for bad input later
