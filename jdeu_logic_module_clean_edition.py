@@ -27,6 +27,16 @@ init()
 
 
 def safe_str(obj):
+    """
+    This function acts as a toString method for object that lack a formal toString, 
+    otherwise it returns the object's default toString
+
+    Parameters:
+    obj (object): Python custom object 
+
+    Returns:
+    str: String representation of the object
+    """
     try:
         return str(obj)
     except UnicodeEncodeError:
