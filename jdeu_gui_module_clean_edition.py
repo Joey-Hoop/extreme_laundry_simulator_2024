@@ -1,3 +1,17 @@
+"""
+<h1>jdeu_gui_module</h1>
+<h2>Extreme Laundry Simulator (Don't laugh at me, I know this is a temporary name)>
+<h3>IEW&S<h3>
+<p>
+The jdeu_gui_module file creates an interface for the user to input
+the JIRA database URL, the user's email, their JIRA token, 
+the project key, and the starting index as well as the ending index
+</p>
+@Author Evan Snyder
+@Since MM/DD/YYYY
+@Version 1.2
+"""
+
 import tkinter as tk
 from tkinter import messagebox
 import threading
@@ -7,8 +21,7 @@ from math import ceil
 from multiprocessing import Process
 from multiprocessing import Lock
 import multiprocessing
-from datetime import datetime, timedelta
-
+from datetime import datetime
 
 CPU_COUNT = multiprocessing.cpu_count()
 if __name__ == '__main__':
@@ -16,21 +29,37 @@ if __name__ == '__main__':
     current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
     filename = f'jira_data_{current_time}.csv'
 
+
     def process_tickets_thread(url: str, username: str, token: str, project_key: str, start_range: int, end_range: int):
+        """
+        This function parses the given list from Jira using all available processors,
+        then each processor runs the logic module on their respective sublist (Runs in parallel)
+
+        Parameters:
+        url (str): Jira database URL
+        username (str): Appropriate username with access to the database
+        token (str): user's Jira token
+        project_key (str): The project key from the user input
+        start_range (int): Lower bound of jira database range given by user
+        end_range (int): Upper bound of jira database range given by user
+
+        Returns:
+        None
+        """
         try:
             processes = []
-            #For now we assume that end_range > start_range, but we can add a failsafe for bad input later
+            # For now, we assume that end_range > start_range, but we can add a failsafe for bad input later
             step_size = ceil((end_range - start_range) / CPU_COUNT)
-    
+
             for i in range(CPU_COUNT):
                 process_min = (i * step_size) + start_range
                 process_max = process_min + step_size if (process_min + step_size < end_range) else end_range
-                processes.append(Process(target=jdeu_logic_module_clean_edition.process_tickets, args=(url, username, token, project_key, process_min,
-                                                                    process_max, filename, lock)))
-                
-                '''filename = jdeu_logic_module_clean_edition.process_tickets(url, username, token, project_key, start_range,
-                                                                    end_range, filename, lock)
-                '''
+                processes.append(Process(target=jdeu_logic_module_clean_edition.process_tickets,
+                                         args=(url, username, token, project_key, process_min,
+                                               process_max, filename, lock)))
+
+                '''filename = jdeu_logic_module_clean_edition.process_tickets(url, username, token, project_key, 
+                start_range, end_range, filename, lock)'''
 
             for p in processes:
                 p.start()
@@ -47,13 +76,23 @@ if __name__ == '__main__':
 
 
     def handle_button_click():
+        """
+        This function receives the user input then passes the values to the process_tickets_thread function
+        once the GUI button is clicked
+
+        Parameters:
+        None
+
+        Returns:
+        None
+        """
         # Disable the button and set its color to gray
         process_button.config(state=tk.DISABLED, bg="gray", activebackground="gray")
         root.after_cancel(color_cycle_id)  # Stop the color cycling
 
         # Update warning message
         warning_label.config(text="DO NOT CLOSE THIS WINDOW\nTHIS MAY TAKE A WHILE\nSEE CONSOLE FOR PROCESS OUTPUT",
-                            fg="red")
+                             fg="red")
 
         # Start the process in a new thread
         url = url_entry.get()
@@ -63,11 +102,21 @@ if __name__ == '__main__':
         start_range = int(start_range_entry.get())
         end_range = int(end_range_entry.get())
 
-        threading.Thread(target=process_tickets_thread, args=(url, username, token, project_key, start_range, end_range),
-                        daemon=True).start()
+        threading.Thread(target=process_tickets_thread,
+                         args=(url, username, token, project_key, start_range, end_range),
+                         daemon=True).start()
 
 
     def cycle_colors():
+        """
+        This function prepares the colors for our GUI
+
+        Parameters:
+        None
+
+        Returns:
+        None
+        """
         hue = 0
         while True:
             rgb = colorsys.hsv_to_rgb(hue, 1, 1)
@@ -80,12 +129,31 @@ if __name__ == '__main__':
 
 
     def start_color_cycle():
+        """
+        This function begins the color cycle
+
+        Parameters:
+        None
+
+        Returns:
+        None
+        """
         global color_cycle, color_cycle_id
         color_cycle = cycle_colors()
         color_cycle_id = root.after(50, lambda: update_color())
 
 
     def update_color():
+        """
+        This function receives the user input then passes the values to the process_tickets_thread function
+        once the GUI button is clicked
+
+        Parameters:
+        None
+
+        Returns:
+        None
+        """
         global color_cycle_id
         try:
             next(color_cycle)

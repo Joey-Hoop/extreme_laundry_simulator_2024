@@ -1,3 +1,16 @@
+"""
+<h1>jdeu_logic_module</h1>
+<h2>Extreme Laundry Simulator (Don't laugh at me, I know this is a temporary name)>
+<h3>IEW&S<h3>
+<p>
+The jdeu_logic_module file connects to JIRA and fetches a list of issues
+from the database and writes them to a CSV file
+</p>
+@Author Evan Snyder
+@Since MM/DD/YYYY
+@Version 1.2
+"""
+
 import csv
 import re
 from datetime import datetime, timedelta
@@ -9,6 +22,7 @@ import concurrent.futures
 # Initialize colorama
 init()
 
+
 # Label these types once we figure out what obj and obj.encode types are
 
 
@@ -19,9 +33,17 @@ def safe_str(obj):
         return obj.encode('ascii', 'replace').decode('ascii')
 
 
-# The time_str is most likely a datetime type, but I will confirm it is not a generic string before labeling
-
 def convert_time_to_seconds(time_str) -> int:
+    """
+    This function converts a datetime string into the number of total seconds
+
+    Parameters:
+        time_str (datetime str): datetime string containing information about the year, month, day,
+    hour, minute, second, and microsecond
+
+    Returns:
+        int: An integer representing the total seconds count of the datetime string, ignoring microseconds
+    """
     # A work day is 8 hours and a work week is 5 days
     time_units = {'w': 5 * 8 * 3600, 'd': 8 * 3600, 'h': 3600, 'm': 60, 's': 1}
     total_seconds = 0
@@ -32,12 +54,33 @@ def convert_time_to_seconds(time_str) -> int:
 
 
 def initialize_jira_connection(url: str, username: str, token: str):
+    """
+    This function establishes a connection to the jira database using the given input
+
+    Parameters:
+    url (str): Jira database URL
+    username (str): Appropriate username with access to the database
+    token (str): user's Jira token
+
+    Returns:
+    Jira: An initialized jira object with connection
+    """
     return Jira(url=url, username=username,
                 token=token)  # !! IMPORTANT !! --- change to token=token when using with SE2 --- (and password=token
     # for Jira Cloud)
 
 
 def fetch_latest_ticket(jira, project_key: str):
+    """
+    This function returns the absolute last ticket in JIRA, regardless of the range given by the user
+
+    Parameters:
+    jira (Jira): Connected Jira object
+    project_key (str): The project key from the user input
+
+    Returns:
+    None
+    """
     jql_query = f'project = {project_key} ORDER BY created DESC'
     try:
         tickets = jira.jql(jql_query, limit=1)['issues']
@@ -51,14 +94,38 @@ def fetch_latest_ticket(jira, project_key: str):
         traceback.print_exc()
         return None
 
+
 # Need to check if start+end range variables are ints or strings, then label
 
 
 def fetch_issues_concurrently(jira, project_key: str, start_range, end_range, max_workers=10) -> list:
+    """
+    This function fetches all the jira values in the given range and places them into a list
+
+    Parameters:
+    jira (Jira): Connected Jira object
+    project_key (str): The project key from the user input
+    start_range (int): Lower bound of jira database range given by user
+    end_range (int): Upper bound of jira database range given by user
+    max_workers (int): Max number of threads to parse the given range **These threads do not run in parallel**
+
+    Returns:
+    list: A list of jira values containing issues
+    """
     issues_list = []
 
     # Make sure jira_issue_key is a string before labelling, it could have its own special type
     def fetch_issue(jira_issue_key):
+        """
+        This function fetches a single Jira issue from the database
+
+        Parameters:
+        jira_issue_key (int): Jira project key string with the index of the issue appended, it is a unique identifier
+
+        Returns:
+        jira_issue: If we can retrieve the issue, we return that single jira value from the database
+        None: If the issue could not be received, we return nothing
+        """
         try:
             jira_issue = jira.issue(jira_issue_key, expand='changelog')
             print(jira_issue['key'], jira_issue['fields']['summary'])
@@ -99,6 +166,16 @@ def fetch_issues_concurrently(jira, project_key: str, start_range, end_range, ma
 
 
 def calculate_working_hours(start_date: datetime, end_date: datetime) -> int:
+    """
+    This function returns the number of hours between the given time frame
+
+    Parameters:
+    start_date (datetime): The date the issue was opened and the work started
+    end_date (datetime): The date the issue was resolved
+
+    Returns:
+    int: number of hour passed from start date to end date
+    """
     weekdays = 0
     current_date = start_date
     while current_date <= end_date:
@@ -109,6 +186,18 @@ def calculate_working_hours(start_date: datetime, end_date: datetime) -> int:
 
 
 def write_issues_to_csv(jira, issues_list, filename, lock):
+    """
+    This function writes a list of jira values into a CSV file
+
+    Parameters:
+    jira (Jira): Connected Jira object
+    issues_list (list): List of jira values containing issues
+    filename (str): targeted CSV file where issues will be written
+    lock (Lock): A lock for parallel processing so no two processors access a critical section at the same time
+
+    Returns:
+    None
+    """
     # Find the highest number of labels out of all the issues
     max_labels = 0
     for issue in issues_list:
@@ -124,7 +213,8 @@ def write_issues_to_csv(jira, issues_list, filename, lock):
             headers = [
                 'Sort_ID', 'Issue Key', 'Summary', 'Status', 'Priority', 'Labels', 'Worklog Comment', 'Author',
                 'Time Spent', 'Time Spent Converted', 'Work Hours', 'Work Days', 'Work Weeks',
-                'Work Months', 'Work Years', 'Inactive', 'Worklog Created', 'FirstWorkLogTimeDate', 'Data Extracted Time',
+                'Work Months', 'Work Years', 'Inactive', 'Worklog Created', 'FirstWorkLogTimeDate',
+                'Data Extracted Time',
                 'Created', 'Done Status Set On', 'Done Completion Seconds', 'Done Completion Hours',
                 'Closed Status Set On', 'Closed Completion Seconds', 'Closed Completion Hours',
                 'New_Completion_Interval_Seconds', 'New_Completion_Interval_Work_Hours',
@@ -155,7 +245,7 @@ def write_issues_to_csv(jira, issues_list, filename, lock):
                 csv_writer.writerow(headers)
             finally:
                 lock.release()
-            
+
             print(f"\nCSV Headers: {headers}\n")
 
         rows = []  # Create a list to store all the rows
@@ -166,7 +256,7 @@ def write_issues_to_csv(jira, issues_list, filename, lock):
                 print(f"\nProcessing issue {issue['key']}...\n")
             finally:
                 lock.release()
-            
+
             sort_id = str(index).zfill(8)  # Pad the sort_id with leading zeros to ensure a consistent length
             issue_key = issue['key']
             summary = issue['fields']['summary']
@@ -366,12 +456,28 @@ def write_issues_to_csv(jira, issues_list, filename, lock):
             csv_writer.writerows(sorted_rows)
         finally:
             lock.release()
-        
 
     print(f"Data successfully written to {filename}")
 
 
-def process_tickets(url: str, username: str, token: str, project_key: str, start_range, end_range, filename: str, lock) -> str:
+def process_tickets(url: str, username: str, token: str, project_key: str, start_range, end_range, filename: str, lock):
+    """
+    This function is what the GUI calls after the user inputs values,
+    and it uses our previous helper functions to achieve the purpose of this file
+
+    Parameters:
+    url (str): Jira database URL
+    username (str): Appropriate username with access to the database
+    token (str): user's Jira token
+    project_key (str): The project key from the user input
+    start_range (int): Lower bound of jira database range given by user
+    end_range (int): Upper bound of jira database range given by user
+    filename (str): targeted CSV file where issues will be written
+    lock (Lock): A lock for parallel processing so no two processors access a critical section at the same time
+
+    Returns:
+    None
+    """
     jira = initialize_jira_connection(url, username, token)
     if __name__ == '__main__':
         print(f"DEBUG: URL = {url}")
@@ -382,18 +488,17 @@ def process_tickets(url: str, username: str, token: str, project_key: str, start
     print(f"DEBUG: End Range = {end_range}")
     if __name__ == '__main__':
         last_ticket = fetch_latest_ticket(jira, project_key)
-    if last_ticket:
-        print(f"DEBUG: Last Ticket = {last_ticket['key']}")
+        if last_ticket:
+            print(f"DEBUG: Last Ticket = {last_ticket['key']}")
 
     issues_list = fetch_issues_concurrently(jira, project_key, start_range, end_range)
-    
 
     # Print bold red text
     if __name__ == '__main__':
         print(Style.BRIGHT + Fore.GREEN + f"[ Creating {filename} ]")
         print(Style.BRIGHT + Fore.RED + "[ !!! THIS IS GOING TO TAKE A WHILE !!! ]" + Style.RESET_ALL)
         print(Style.BRIGHT + Fore.RED + "[ !!! -- DO NOT CLOSE THIS WINDOW -- !!! ]" + Style.RESET_ALL)
-    
+
     write_issues_to_csv(jira, issues_list, filename, lock)
 
     print(f"Data written to {filename}")
