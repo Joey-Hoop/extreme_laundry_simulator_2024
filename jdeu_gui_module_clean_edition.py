@@ -22,6 +22,7 @@ from multiprocessing import Process
 from multiprocessing import Lock
 import multiprocessing
 from datetime import datetime
+import json
 
 CPU_COUNT = multiprocessing.cpu_count()
 if __name__ == '__main__':
@@ -194,7 +195,46 @@ if __name__ == '__main__':
     project_key_entry = tk.Entry(root)
     project_key_entry.insert(0, default_project_key)
     project_key_entry.pack(pady=2)
+    #NEW STUFF HERE
+    #
+    #
+    json_file = open("configs.json")
+    configs = json.load(json_file)
+    print(configs)
+    json_file.close() # Move this to after scan so we can edit values before the file closes
 
+    config_booleans = []
+    for header in configs:
+        config_booleans.append(tk.BooleanVar(value =configs[header]))
+    config_buttons = []
+    for bool in config_booleans:
+        config_buttons.append(tk.Checkbutton(root, text="Include Column 1", variable=bool, 
+                             onvalue=True, offvalue=False))
+        
+
+    def scan_button_click():
+        configBool.set(not(configBool.get()))
+        start_range_entry.delete(0, tk.END)
+        start_range_entry.insert(0, "0")
+        # Add other scan stuff in here later, such as setting range
+        if configBool.get():
+            for button in config_buttons:
+                button.pack(pady=2)
+        else:
+            for button in config_buttons:
+                button.pack_forget()
+
+    configBool = tk.BooleanVar(value=False)
+    
+    # This is temporary just to show that the values update independently
+    for bool in config_booleans:
+        tk.Label(root, textvariable=bool).pack(pady=2)
+    
+    scan_button = tk.Button(root, text="Scan And Configure", command=scan_button_click)
+    scan_button.pack(pady=2)
+    #
+    #
+    #STOOOOOP!!!!!!!
     tk.Label(root, text="Start Range:").pack(pady=2)
     start_range_entry = tk.Entry(root)
     start_range_entry.insert(0, default_start_range)
