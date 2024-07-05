@@ -87,6 +87,7 @@ if __name__ == '__main__':
         Returns:
         None
         """
+        save_configs()
         # Disable the button and set its color to gray
         process_button.config(state=tk.DISABLED, bg="gray", activebackground="gray")
         root.after_cancel(color_cycle_id)  # Stop the color cycling
@@ -198,19 +199,23 @@ if __name__ == '__main__':
     #NEW STUFF HERE
     #
     #
-    json_file = open("configs.json")
-    configs = json.load(json_file)
-    print(configs)
-    json_file.close() # Move this to after scan so we can edit values before the file closes
+    with open("configs.json", "r") as json_file:
+        configs = json.load(json_file)
+
+     # Move this to after scan so we can edit values before the file closes
 
     config_booleans = []
     for header in configs:
         config_booleans.append(tk.BooleanVar(value =configs[header]))
     config_buttons = []
-    for bool in config_booleans:
-        config_buttons.append(tk.Checkbutton(root, text="Include Column 1", variable=bool, 
+    for header, bool in zip(configs, config_booleans):
+        config_buttons.append(tk.Checkbutton(root, text=f"Include {header}", variable=bool, 
                              onvalue=True, offvalue=False))
-        
+    def save_configs():
+        for header, bool in zip(configs, config_booleans):
+            configs[header] = bool.get()
+        with open("configs.json", 'w') as file:
+            json.dump(configs, file, indent=4)
 
     def scan_button_click():
         configBool.set(not(configBool.get()))
