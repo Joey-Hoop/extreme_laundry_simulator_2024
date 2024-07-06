@@ -212,12 +212,31 @@ if __name__ == '__main__':
         config_buttons.append(tk.Checkbutton(root, text=f"Include {header}", variable=bool, 
                              onvalue=True, offvalue=False))
     def save_configs():
+        '''
+        This function writes the boolean values of the checkboxes into the configs file
+
+        Parameters:
+        None
+
+        Returns:
+        None
+        '''
         for header, bool in zip(configs, config_booleans):
             configs[header] = bool.get()
         with open("configs.json", 'w') as file:
             json.dump(configs, file, indent=4)
 
     def scan_button_click():
+        '''
+        This function is the button handler for the scan button. It changes the value of the configBool variable,
+        which determines whether or not the configuration checkboxes appear, and either displays or hides the boxes.
+
+        Parameters:
+        None
+
+        Returns:
+        None
+        '''
         configBool.set(not(configBool.get()))
         start_range_entry.delete(0, tk.END)
         start_range_entry.insert(0, "0")
@@ -230,10 +249,6 @@ if __name__ == '__main__':
                 button.pack_forget()
 
     configBool = tk.BooleanVar(value=False)
-    
-    # This is temporary just to show that the values update independently
-    for bool in config_booleans:
-        tk.Label(root, textvariable=bool).pack(pady=2)
     
     scan_button = tk.Button(root, text="Scan And Configure", command=scan_button_click)
     scan_button.pack(pady=2)
