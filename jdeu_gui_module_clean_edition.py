@@ -167,6 +167,10 @@ if __name__ == '__main__':
     root = tk.Tk()
     root.title("Jira Data Extraction Utility")
     root.geometry("500x500")
+    entry_frame = tk.Frame(root)
+    entry_frame.pack(side="left", fill="y")
+    checkbuttons_frame = tk.Frame(root)
+    checkbuttons_frame.pack(side="right", fill="y")
 
     # Default values
     default_url = ""
@@ -177,23 +181,23 @@ if __name__ == '__main__':
     default_end_range = ""
 
     # Labels and entries with padding
-    tk.Label(root, text="Jira URL:").pack(pady=2)
-    url_entry = tk.Entry(root)
+    tk.Label(entry_frame, text="Jira URL:").pack(pady=2)
+    url_entry = tk.Entry(entry_frame)
     url_entry.insert(0, default_url)
     url_entry.pack(pady=2)
 
-    tk.Label(root, text="Jira Username:").pack(pady=2)
-    username_entry = tk.Entry(root)
+    tk.Label(entry_frame, text="Jira Username:").pack(pady=2)
+    username_entry = tk.Entry(entry_frame)
     username_entry.insert(0, default_username)
     username_entry.pack(pady=2)
 
-    tk.Label(root, text="Jira Token:").pack(pady=2)
-    token_entry = tk.Entry(root, show="*")
+    tk.Label(entry_frame, text="Jira Token:").pack(pady=2)
+    token_entry = tk.Entry(entry_frame, show="*")
     token_entry.insert(0, default_token)
     token_entry.pack(pady=2)
 
-    tk.Label(root, text="Project Key:").pack(pady=2)
-    project_key_entry = tk.Entry(root)
+    tk.Label(entry_frame, text="Project Key:").pack(pady=2)
+    project_key_entry = tk.Entry(entry_frame)
     project_key_entry.insert(0, default_project_key)
     project_key_entry.pack(pady=2)
     #NEW STUFF HERE
@@ -209,7 +213,7 @@ if __name__ == '__main__':
         config_booleans.append(tk.BooleanVar(value =configs[header]))
     config_buttons = []
     for header, bool in zip(configs, config_booleans):
-        config_buttons.append(tk.Checkbutton(root, text=f"Include {header}", variable=bool, 
+        config_buttons.append(tk.Checkbutton(checkbuttons_frame, text=f"Include {header}", variable=bool, 
                              onvalue=True, offvalue=False))
     def save_configs():
         """
@@ -250,27 +254,27 @@ if __name__ == '__main__':
 
     configBool = tk.BooleanVar(value=False)
     
-    scan_button = tk.Button(root, text="Scan And Configure", command=scan_button_click)
+    scan_button = tk.Button(entry_frame, text="Scan And Configure", command=scan_button_click)
     scan_button.pack(pady=2)
     #
     #
     #STOOOOOP!!!!!!!
-    tk.Label(root, text="Start Range:").pack(pady=2)
-    start_range_entry = tk.Entry(root)
+    tk.Label(entry_frame, text="Start Range:").pack(pady=2)
+    start_range_entry = tk.Entry(entry_frame)
     start_range_entry.insert(0, default_start_range)
     start_range_entry.pack(pady=2)
 
-    tk.Label(root, text="End Range:").pack(pady=2)
-    end_range_entry = tk.Entry(root)
+    tk.Label(entry_frame, text="End Range:").pack(pady=2)
+    end_range_entry = tk.Entry(entry_frame)
     end_range_entry.insert(0, default_end_range)
     end_range_entry.pack(pady=2)
 
     # Process button with padding
-    process_button = tk.Button(root, text="Extract Data", command=handle_button_click)
+    process_button = tk.Button(entry_frame, text="Extract Data", command=handle_button_click)
     process_button.pack(pady=2)
 
     # Warning label with padding
-    warning_label = tk.Label(root, text="", font=("Helvetica", 10, "bold"))
+    warning_label = tk.Label(entry_frame, text="", font=("Helvetica", 10, "bold"))
     warning_label.pack(pady=2)
 
     color_cycle = None
