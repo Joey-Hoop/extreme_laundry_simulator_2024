@@ -1,7 +1,7 @@
 {
-    "Sort_ID": false,
-    "Issue Key": false,
-    "Summary": false,
+    "Sort_ID": true,
+    "Issue Key": true,
+    "Summary": true,
     "Status": true,
     "Priority": true,
     "Labels": true,

@@ -166,7 +166,7 @@ if __name__ == '__main__':
 
     root = tk.Tk()
     root.title("Jira Data Extraction Utility")
-    root.geometry("500x500")
+    root.geometry("1200x500")
     entry_frame = tk.Frame(root)
     entry_frame.pack(side="left", fill="y")
     checkbuttons_frame = tk.Frame(root)
@@ -200,20 +200,21 @@ if __name__ == '__main__':
     project_key_entry = tk.Entry(entry_frame)
     project_key_entry.insert(0, default_project_key)
     project_key_entry.pack(pady=2)
-    #NEW STUFF HERE
-    #
-    #
+
     with open("configs.json", "r") as json_file:
         configs = json.load(json_file)
-
-     # Move this to after scan so we can edit values before the file closes
+        NUM_BUTTON_COlUMNS = ceil(len(configs) / 18) # This 18 can be changed if we would like more or less buttons/column
 
     config_booleans = []
     for header in configs:
         config_booleans.append(tk.BooleanVar(value =configs[header]))
+    button_frames = []
+    for i in range(NUM_BUTTON_COlUMNS):
+        button_frames.append(tk.Frame(checkbuttons_frame))
+        button_frames[i].pack(side="left", fill="y")
     config_buttons = []
-    for header, bool in zip(configs, config_booleans):
-        config_buttons.append(tk.Checkbutton(checkbuttons_frame, text=f"Include {header}", variable=bool, 
+    for (index, header), bool in zip(enumerate(configs), config_booleans):
+        config_buttons.append(tk.Checkbutton(button_frames[index % NUM_BUTTON_COlUMNS], text=f"Include {header}", variable=bool, 
                              onvalue=True, offvalue=False))
     def save_configs():
         """
@@ -247,7 +248,7 @@ if __name__ == '__main__':
         # Add other scan stuff in here later, such as setting range
         if configBool.get():
             for button in config_buttons:
-                button.pack(pady=2)
+                button.pack(pady=2, anchor="w")
         else:
             for button in config_buttons:
                 button.pack_forget()
@@ -256,9 +257,7 @@ if __name__ == '__main__':
     
     scan_button = tk.Button(entry_frame, text="Scan And Configure", command=scan_button_click)
     scan_button.pack(pady=2)
-    #
-    #
-    #STOOOOOP!!!!!!!
+    
     tk.Label(entry_frame, text="Start Range:").pack(pady=2)
     start_range_entry = tk.Entry(entry_frame)
     start_range_entry.insert(0, default_start_range)
