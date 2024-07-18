@@ -1,0 +1,3 @@
+pip install atlassian-python-api
+pip install colorama
+pip install traceback2
