@@ -18,16 +18,16 @@ import threading
 import jdeu_logic_module_clean_edition  # Ensure this is in the same directory
 import colorsys
 from math import ceil
-from multiprocessing import Process
-from multiprocessing import Lock
+from multiprocessing import Process, Lock
 import multiprocessing
 from datetime import datetime
 import json
 
-CPU_COUNT = multiprocessing.cpu_count() - 1
-if __name__ == '__main__':
-    lock = Lock()
 
+if __name__ == '__main__':
+    CPU_COUNT = multiprocessing.cpu_count() - 1
+    lock = Lock()
+    barrier = multiprocessing.Barrier(CPU_COUNT)
 
     def process_tickets_thread(url: str, username: str, token: str, project_key: str, start_range: int, end_range: int):
         """
@@ -57,7 +57,7 @@ if __name__ == '__main__':
                 process_max = process_min + step_size if (process_min + step_size < end_range) else end_range
                 processes.append(Process(target=jdeu_logic_module_clean_edition.process_tickets,
                                          args=(url, username, token, project_key, process_min,
-                                               process_max, filename, lock)))
+                                               process_max, filename, lock, barrier)))
 
                 '''filename = jdeu_logic_module_clean_edition.process_tickets(url, username, token, project_key, 
                 start_range, end_range, filename, lock)'''
