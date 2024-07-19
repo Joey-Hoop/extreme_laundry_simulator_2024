@@ -18,7 +18,7 @@ from atlassian import Jira
 import traceback2 as traceback
 from colorama import Fore, Style, init
 import concurrent.futures
-
+from multiprocessing import current_process
 # Initialize colorama
 init()
 
@@ -216,9 +216,9 @@ def write_issues_to_csv(jira, issues_list, filename, lock):
             max_labels = len(labels)
 
     print(f"Starting to write data to {filename}...")
-    with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
+    with open(filename, 'a', newline='', encoding='utf-8') as csvfile:
         csv_writer = csv.writer(csvfile)
-        if __name__ == '__main__':
+        if current_process().name == "Process-1":
             # Headers for the CSV file
             headers = [
                 'Sort_ID', 'Issue Key', 'Summary', 'Status', 'Priority', 'Labels', 'Worklog Comment', 'Author',
@@ -489,14 +489,14 @@ def process_tickets(url: str, username: str, token: str, project_key: str, start
     None
     """
     jira = initialize_jira_connection(url, username, token)
-    if __name__ == '__main__':
+    if current_process().name == "Process-1":
         print(f"DEBUG: URL = {url}")
         print(f"DEBUG: Username = {username}")
         print(f"DEBUG: Token = {token}")
         print(f"DEBUG: Project Key = {project_key}")
     print(f"DEBUG: Start Range = {start_range}")
     print(f"DEBUG: End Range = {end_range}")
-    if __name__ == '__main__':
+    if current_process().name == "Process-1":
         last_ticket = fetch_latest_ticket(jira, project_key)
         if last_ticket:
             print(f"DEBUG: Last Ticket = {last_ticket['key']}")
@@ -504,7 +504,7 @@ def process_tickets(url: str, username: str, token: str, project_key: str, start
     issues_list = fetch_issues_concurrently(jira, project_key, start_range, end_range)
 
     # Print bold red text
-    if __name__ == '__main__':
+    if current_process().name == "Process-1":
         print(Style.BRIGHT + Fore.GREEN + f"[ Creating {filename} ]")
         print(Style.BRIGHT + Fore.RED + "[ !!! THIS IS GOING TO TAKE A WHILE !!! ]" + Style.RESET_ALL)
         print(Style.BRIGHT + Fore.RED + "[ !!! -- DO NOT CLOSE THIS WINDOW -- !!! ]" + Style.RESET_ALL)

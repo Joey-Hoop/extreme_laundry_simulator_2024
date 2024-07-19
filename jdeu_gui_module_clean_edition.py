@@ -24,7 +24,7 @@ import multiprocessing
 from datetime import datetime
 import json
 
-CPU_COUNT = multiprocessing.cpu_count()
+CPU_COUNT = multiprocessing.cpu_count() - 1
 if __name__ == '__main__':
     lock = Lock()
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
             step_size = ceil((end_range - start_range) / CPU_COUNT)
 
             for i in range(CPU_COUNT):
-                process_min = (i * step_size) + start_range
+                process_min = (i * step_size) + start_range if ((i * step_size) + start_range < end_range) else end_range
                 process_max = process_min + step_size if (process_min + step_size < end_range) else end_range
                 processes.append(Process(target=jdeu_logic_module_clean_edition.process_tickets,
                                          args=(url, username, token, project_key, process_min,
