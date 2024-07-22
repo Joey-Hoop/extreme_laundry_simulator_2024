@@ -47,6 +47,7 @@ if __name__ == '__main__':
         """
         current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f'jira_data_{current_time}.csv'
+        end_range += 1
         try:
             processes = []
             # For now, we assume that end_range > start_range, but we can add a failsafe for bad input later

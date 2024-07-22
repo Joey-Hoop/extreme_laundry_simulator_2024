@@ -11,6 +11,7 @@ import json
 import csv
 # THIS FILE IS AN EXAMPLE!!
 # This file does not affect the running program or gui in any way
+CPU_COUNT = multiprocessing.cpu_count() - 1
 '''
 if __name__ == '__main__':
     CPU_COUNT = multiprocessing.cpu_count() - 1
@@ -49,7 +50,7 @@ def example(min: int, max: int, array):
 
 def exampleTwo(lock, barrier):
     
-    if current_process().name == "Process-1":
+    if int(current_process().name[8:]) % CPU_COUNT == 0:
         time.sleep(2)
         print("I am main, I am: " + str(current_process().name))
         with lock:
@@ -58,7 +59,7 @@ def exampleTwo(lock, barrier):
                 csv_writer.writerow(["I am main, I am: " + str(current_process().name)])
 
     barrier.wait()
-    print(str(current_process().name))
+    print(str(current_process().name[8:]))
     with lock:
         with open("test.csv", 'a', newline='', encoding='utf-8') as csvfile:
             csv_writer = csv.writer(csvfile)
@@ -68,7 +69,7 @@ def exampleTwo(lock, barrier):
 # In Parallel
 
 if __name__ == '__main__':
-    CPU_COUNT = multiprocessing.cpu_count() - 1
+    
     print("CPU count: " + str(CPU_COUNT))
     print(current_process())
     barrier = multiprocessing.Barrier(CPU_COUNT)
@@ -82,14 +83,18 @@ if __name__ == '__main__':
     #step_size = ceil((max - min) / CPU_COUNT)
 
     print("In Parallel:")
+    def testBoy():
+        processes = []
+        for i in range(CPU_COUNT):
+            #process_min = (i * step_size) + min if ((i * step_size) + min < max) else max
+            #process_max = process_min + step_size if (process_min + step_size < max) else max
+            processes.append(Process(target=exampleTwo, args=(lock, barrier)))
 
-    processes = []
-    for i in range(CPU_COUNT):
-        #process_min = (i * step_size) + min if ((i * step_size) + min < max) else max
-        #process_max = process_min + step_size if (process_min + step_size < max) else max
-        processes.append(Process(target=exampleTwo, args=(lock, barrier)))
-
-    for p in processes:
-        p.start()
-    for p in processes:
-        p.join()
+        for p in processes:
+            p.start()
+        for p in processes:
+            p.join()
+    testBoy()
+    testBoy()
+    testBoy()
+    testBoy()
