@@ -218,11 +218,11 @@ def write_issues_to_csv(jira, issues_list, filename, lock, barrier):
             max_labels = len(labels)
 
     print(f"Starting to write data to {filename}...")
-    
+    with open("configs.json", "r") as json_file:
+            configs = json.load(json_file)
     if int(current_process().name[8:]) % CPU_COUNT == 0:
         # Headers for the CSV file
-        with open("configs.json", "r") as json_file:
-            configs = json.load(json_file)
+        
         headers = []
         for header in configs:
             if configs[header]:
@@ -394,9 +394,11 @@ def write_issues_to_csv(jira, issues_list, filename, lock, barrier):
                             safe_str(status_timestamps['Ready for Release']),
                             safe_str(complexity), first_worklog_timestamp, done_timestamp,
                             safe_str(labels),
-                        ] + label_fields
+                        ]
                 
                 row[:] = [column for config, column in zip(configs, row) if configs[config]]
+                if configs["Labels"]:
+                    row.extend(label_fields)
                 rows.append(row)  # Append each row to the rows list
 
                 print(Style.BRIGHT + Fore.GREEN + f"\nWriting to CSV: {row}\n")  # Print each row as it's written
@@ -432,9 +434,11 @@ def write_issues_to_csv(jira, issues_list, filename, lock, barrier):
                         safe_str(status_timestamps['Ready for Release']),
                         safe_str(complexity), 0, # Set DEBUG_FirstWorklogTimestamp to 0 for issues without worklogs
                         done_timestamp, safe_str(labels),
-                    ] + [''] * max_labels # Append the Complexity field to the row
+                    ]
             
             row[:] = [column for config, column in zip(configs, row) if configs[config]]
+            if configs["Labels"]:
+                    row.extend([''] * max_labels)
             rows.append(row)  # Append each row to the rows list
             print(Style.BRIGHT + Fore.GREEN + f"\nWriting to CSV: {row}\n")  # Print for issues without worklogs
 
