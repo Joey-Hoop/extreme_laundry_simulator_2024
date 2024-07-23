@@ -19,6 +19,7 @@ import traceback2 as traceback
 from colorama import Fore, Style, init
 import concurrent.futures
 from multiprocessing import current_process, cpu_count
+import json
 # Initialize colorama
 init()
 
@@ -220,34 +221,17 @@ def write_issues_to_csv(jira, issues_list, filename, lock, barrier):
     
     if int(current_process().name[8:]) % CPU_COUNT == 0:
         # Headers for the CSV file
-        headers = [
-            'Sort_ID', 'Issue Key', 'Summary', 'Status', 'Priority', 'Labels', 'Worklog Comment', 'Author',
-            'Time Spent', 'Time Spent Converted', 'Work Hours', 'Work Days', 'Work Weeks',
-            'Work Months', 'Work Years', 'Inactive', 'Worklog Created', 'FirstWorkLogTimeDate',
-            'Data Extracted Time',
-            'Created', 'Done Status Set On', 'Done Completion Seconds', 'Done Completion Hours',
-            'Closed Status Set On', 'Closed Completion Seconds', 'Closed Completion Hours',
-            'New_Completion_Interval_Seconds', 'New_Completion_Interval_Work_Hours',
-            'FaultyNCI', 'WORKLOGS_EXIST',  # Add the new column
-            'Ready for Documentation', 'In Documentation', 'Doc Review',
-            'Ready for Development', 'In Development', 'Development Review',
-            'Ready for Test', 'In Test',
-            'Ready for Integration', 'In Integration',
-            'Ready for Cyber', 'In Cyber', 'Cyber Review',
-            'Done',
-            'Ready for ERB Review', 'Ready for CCB Review', 'Ready for Release'
-        ]
+        with open("configs.json", "r") as json_file:
+            configs = json.load(json_file)
+        headers = []
+        for header in configs:
+            if configs[header]:
+                headers.append(header)
 
         # Append label headers
-        label_headers = [f'Label {i + 1}' for i in range(max_labels)]
-        headers.extend(label_headers)
-
-        # Append the Complexity header
-        headers.append('Complexity')
-
-        # Append the DEBUG_FirstWorklogTimestamp and DEBUG_DoneTimestamp headers
-        headers.append('DEBUG_FirstWorklogTimestamp')
-        headers.append('DEBUG_DoneTimestamp')
+        if configs["Labels"]:
+            label_headers = [f'Label {i + 1}' for i in range(max_labels)]
+            headers.extend(label_headers)
 
         print(f"\nStrap in, here we go...\n")
         with lock:
@@ -381,7 +365,6 @@ def write_issues_to_csv(jira, issues_list, filename, lock, barrier):
 
                 row = [
                             sort_id, safe_str(issue_key), safe_str(summary), safe_str(status), safe_str(priority),
-                            safe_str(labels),
                             safe_str(comment), safe_str(author_name), safe_str(time_spent),
                             time_spent_seconds, time_spent_hours, time_spent_days, time_spent_weeks,
                             time_spent_months, time_spent_years, inactive, safe_str(worklog_created),
@@ -408,12 +391,12 @@ def write_issues_to_csv(jira, issues_list, filename, lock, barrier):
                             safe_str(status_timestamps['Done']),
                             safe_str(status_timestamps['Ready for ERB Review']),
                             safe_str(status_timestamps['Ready for CCB Review']),
-                            safe_str(status_timestamps['Ready for Release'])
-                        ] + label_fields + [safe_str(complexity)]  # Append the Complexity field to the row
-                # Append the DEBUG_FirstWorklogTimestamp and DEBUG_DoneTimestamp values
-                row.append(first_worklog_timestamp)
-                row.append(done_timestamp)
-
+                            safe_str(status_timestamps['Ready for Release']),
+                            safe_str(complexity), first_worklog_timestamp, done_timestamp,
+                            safe_str(labels),
+                        ] + label_fields
+                
+                row[:] = [column for config, column in zip(configs, row) if configs[config]]
                 rows.append(row)  # Append each row to the rows list
 
                 print(Style.BRIGHT + Fore.GREEN + f"\nWriting to CSV: {row}\n")  # Print each row as it's written
@@ -423,7 +406,6 @@ def write_issues_to_csv(jira, issues_list, filename, lock, barrier):
             closed_completion_hours = closed_completion_seconds / 3600 if closed_completion_seconds else 0
             row = [
                         sort_id, safe_str(issue_key), safe_str(summary), safe_str(status), safe_str(priority),
-                        safe_str(labels),
                         'No worklog comment.', '', '', '', '', '', '', '', '', 'No', '',
                         '',  # Add an empty string for FirstWorkLogTimeDate when there are no worklogs
                         datetime.now().isoformat(), safe_str(created), safe_str(done_status_set_on),
@@ -447,13 +429,12 @@ def write_issues_to_csv(jira, issues_list, filename, lock, barrier):
                         safe_str(status_timestamps['Done']),
                         safe_str(status_timestamps['Ready for ERB Review']),
                         safe_str(status_timestamps['Ready for CCB Review']),
-                        safe_str(status_timestamps['Ready for Release'])
-                    ] + [''] * max_labels + [safe_str(complexity)]  # Append the Complexity field to the row
-
-            # Append the DEBUG_FirstWorklogTimestamp and DEBUG_DoneTimestamp values
-            row.append(0)  # Set DEBUG_FirstWorklogTimestamp to 0 for issues without worklogs
-            row.append(done_timestamp)
-
+                        safe_str(status_timestamps['Ready for Release']),
+                        safe_str(complexity), 0, # Set DEBUG_FirstWorklogTimestamp to 0 for issues without worklogs
+                        done_timestamp, safe_str(labels),
+                    ] + [''] * max_labels # Append the Complexity field to the row
+            
+            row[:] = [column for config, column in zip(configs, row) if configs[config]]
             rows.append(row)  # Append each row to the rows list
             print(Style.BRIGHT + Fore.GREEN + f"\nWriting to CSV: {row}\n")  # Print for issues without worklogs
 

@@ -4,7 +4,6 @@
     "Summary": true,
     "Status": true,
     "Priority": true,
-    "Labels": true,
     "Worklog Comment": true,
     "Author": true,
     "Time Spent": true,
@@ -48,5 +47,6 @@
     "Ready for Release": true,
     "Complexity": true,
     "DEBUG_FirstWorklogTimestamp": true,
-    "DEBUG_DoneTimestamp": true
+    "DEBUG_DoneTimestamp": true,
+    "Labels": true
 }
