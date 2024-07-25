@@ -22,6 +22,7 @@ from multiprocessing import Process, Lock
 import multiprocessing
 from datetime import datetime
 import json
+from atlassian import Jira
 
 
 if __name__ == '__main__':
@@ -246,6 +247,20 @@ if __name__ == '__main__':
         configBool.set(not(configBool.get()))
         start_range_entry.delete(0, tk.END)
         start_range_entry.insert(0, "0")
+        
+        try:
+            end_range_entry.delete(0,tk.END)
+            jira = Jira(url=url_entry.get(), username=username_entry.get(),
+                    token=token_entry.get()) # !! IMPORTANT !! --- change to token=token when using with SE2 --- (and password=token
+    # for Jira Cloud)
+            end = jdeu_logic_module_clean_edition.fetch_latest_ticket(jira, project_key_entry.get())
+            if end:
+                end = end['key'].split("-")[1]
+            end_range_entry.insert(0,end)
+        except Exception as e:
+            print(e)
+        
+
         # Add other scan stuff in here later, such as setting range
         if configBool.get():
             for button in config_buttons:
