@@ -26,6 +26,29 @@ init()
 CPU_COUNT = cpu_count() - 1
 # Label these types once we figure out what obj and obj.encode types are
 
+def extract_keys(d, parent_key=''):
+    """
+    This function extracts all the headers and sub-headers from a dictionary (Jira object),
+    and returns them as a list
+
+    Parameters:
+    d (dictionary): a Jira object dictionary containing all standard and custom headers
+    Parent key: The string of the parent key of a sub-dictionary for recurssive calls
+
+    Returns:
+    List: A list containing all of the headers and subheaders for a Jira object within a project.
+    """
+    keys = []
+    for k, v in d.items():
+        full_key = f"{parent_key}.{k}" if parent_key else k
+        keys.append(full_key)
+        if isinstance(v, dict):
+            keys.extend(extract_keys(v, full_key))
+        elif isinstance(v, list):
+            for i, item in enumerate(v):
+                if isinstance(item, dict):
+                    keys.extend(extract_keys(item, f"{full_key}[{i}]"))
+    return keys
 
 def safe_str(obj):
     """
