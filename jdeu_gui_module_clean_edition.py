@@ -13,7 +13,7 @@ the project key, and the starting index as well as the ending index
 """
 
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 import threading
 import jdeu_logic_module_clean_edition  # Ensure this is in the same directory
 import colorsys
@@ -169,11 +169,29 @@ if __name__ == '__main__':
     root = tk.Tk()
     root.title("Jira Data Extraction Utility")
     root.geometry("1200x500")
-    entry_frame = tk.Frame(root)
+
+    main_frame = tk.Frame(root)
+    main_frame.pack(fill=tk.BOTH, expand=True)
+
+    canvas = tk.Canvas(main_frame)
+    canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+    scrollbar = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=canvas.yview)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    canvas.configure(yscrollcommand=scrollbar.set)
+    canvas.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+    
+    canvas_frame = tk.Frame(canvas)
+    canvas_frame.pack(fill="y")
+
+    entry_frame = tk.Frame(canvas_frame)
     entry_frame.pack(side="left", fill="y")
-    checkbuttons_frame = tk.Frame(root)
+
+    checkbuttons_frame = tk.Frame(canvas_frame)
     checkbuttons_frame.pack(side="right", fill="y")
 
+    canvas.create_window((0,0),window=canvas_frame, anchor="nw")
     # Default values
     default_url = ""
     default_username = ""
