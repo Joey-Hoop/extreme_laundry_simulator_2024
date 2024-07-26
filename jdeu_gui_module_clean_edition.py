@@ -23,7 +23,7 @@ import multiprocessing
 from datetime import datetime
 import json
 from atlassian import Jira
-
+import os
 
 if __name__ == '__main__':
     CPU_COUNT = multiprocessing.cpu_count() - 1
@@ -89,7 +89,6 @@ if __name__ == '__main__':
         Returns:
         None
         """
-        save_configs()
         # Disable the button and set its color to gray
         process_button.config(state=tk.DISABLED, bg="gray", activebackground="gray")
         root.after_cancel(color_cycle_id)  # Stop the color cycling
@@ -105,6 +104,11 @@ if __name__ == '__main__':
         project_key = project_key_entry.get()
         start_range = int(start_range_entry.get())
         end_range = int(end_range_entry.get())
+        if configs:
+            save_configs(project_key, configs)
+        else:
+            #This appens if they don't click scan on a new project
+            print("Make the configs file")
 
         threading.Thread(target=process_tickets_thread,
                          args=(url, username, token, project_key, start_range, end_range),
@@ -220,35 +224,29 @@ if __name__ == '__main__':
     project_key_entry = tk.Entry(entry_frame)
     project_key_entry.insert(0, default_project_key)
     project_key_entry.pack(pady=2)
-
-    with open("configs.json", "r") as json_file:
-        configs = json.load(json_file)
-        NUM_BUTTON_COlUMNS = ceil(len(configs) / 18) # This 18 can be changed if we would like more or less buttons/column
-
+    configs = {}
     config_booleans = []
-    for header in configs:
-        config_booleans.append(tk.BooleanVar(value =configs[header]))
     button_frames = []
+    config_buttons = []
+    NUM_BUTTON_COlUMNS = 3
     for i in range(NUM_BUTTON_COlUMNS):
         button_frames.append(tk.Frame(checkbuttons_frame))
         button_frames[i].pack(side="left", fill="y")
-    config_buttons = []
-    for (index, header), bool in zip(enumerate(configs), config_booleans):
-        config_buttons.append(tk.Checkbutton(button_frames[index % NUM_BUTTON_COlUMNS], text=f"Include {header}", variable=bool, 
-                             onvalue=True, offvalue=False))
-    def save_configs():
+    
+    def save_configs(project_key, configs):
         """
         This function writes the boolean values of the checkboxes into the configs file
 
         Parameters:
-        None
+        project_key: String containing the name of the project being used
+        configs: dictionary containing configs to save
 
         Returns:
         None
         """
         for header, bool in zip(configs, config_booleans):
             configs[header] = bool.get()
-        with open("configs.json", 'w') as file:
+        with open(f"{project_key}_configs.json", 'w') as file:
             json.dump(configs, file, indent=4)
 
     def scan_button_click():
@@ -261,17 +259,15 @@ if __name__ == '__main__':
 
         Returns:
         None
-        """
-        
-        
-        
+        """  
+
         try:
             jira = Jira(url=url_entry.get(), username=username_entry.get(),
                     token=token_entry.get()) # !! IMPORTANT !! --- change to token=token when using with SE2 --- (and password=token
     # for Jira Cloud)
-            end = jdeu_logic_module_clean_edition.fetch_latest_ticket(jira, project_key_entry.get())
-            if end:
-                end = end['key'].split("-")[1]
+            ticket = jdeu_logic_module_clean_edition.fetch_latest_ticket(jira, project_key_entry.get())
+            if ticket:
+                end = ticket['key'].split("-")[1]
                 configBool.set(not(configBool.get()))
             else:
                 configBool.set(False)
@@ -280,6 +276,21 @@ if __name__ == '__main__':
                 start_range_entry.insert(0, "0")
                 end_range_entry.delete(0,tk.END)
                 end_range_entry.insert(0,end)
+                
+            if not scanned_bool.get() and end:
+                scanned_bool.set(True)
+                if not os.path.isfile(f"{project_key_entry.get()}_configs.json"):
+                    jdeu_logic_module_clean_edition.make_configs_file(project_key_entry.get(),ticket) 
+
+                with open(f"{project_key_entry.get()}_configs.json", "r") as json_file:
+                        configs.update(json.load(json_file))
+
+                for header in configs:
+                    config_booleans.append(tk.BooleanVar(value =configs[header]))
+                
+                for (index, header), bool in zip(enumerate(configs), config_booleans):
+                    config_buttons.append(tk.Checkbutton(button_frames[index % NUM_BUTTON_COlUMNS], text=f"Include {header}", variable=bool, 
+                                        onvalue=True, offvalue=False))
         except Exception as e:
             print(e)
             configBool.set(False)
@@ -294,7 +305,7 @@ if __name__ == '__main__':
                 button.pack_forget()
 
     configBool = tk.BooleanVar(value=False)
-    
+    scanned_bool = tk.BooleanVar(value=False)
     scan_button = tk.Button(entry_frame, text="Scan And Configure", command=scan_button_click)
     scan_button.pack(pady=2)
     

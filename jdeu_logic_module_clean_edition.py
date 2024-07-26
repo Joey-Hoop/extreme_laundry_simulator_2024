@@ -50,6 +50,23 @@ def extract_keys(d, parent_key=''):
                     keys.extend(extract_keys(item, f"{full_key}[{i}]"))
     return keys
 
+def make_configs_file(project_key, ticket):
+    """
+    This function creates a new configuration file, which is a dictionary
+    consisting of all the headers in a project ticket, all mapped to a 
+    boolean, determining whether or not to include the header in the output
+
+    Parameters:
+    project_key: String containing the name of the project being used
+    """
+    keys = extract_keys(ticket)
+
+    configs = {}
+    for key in keys:
+        configs[key] = True
+    with open(f"{project_key}_configs.json", 'w') as file:
+        json.dump(configs, file, indent=4)
+        
 def safe_str(obj):
     """
     This function acts as a toString method for object that lack a formal toString, 
