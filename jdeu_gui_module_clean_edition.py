@@ -276,7 +276,7 @@ if __name__ == '__main__':
                 configBool.set(False)
             if configBool.get() and ticket:
                 start_range_entry.delete(0, tk.END)
-                start_range_entry.insert(0, "0")
+                start_range_entry.insert(0, "1")
                 end_range_entry.delete(0,tk.END)
                 end_range_entry.insert(0,end)
                 

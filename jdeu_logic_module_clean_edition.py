@@ -193,27 +193,27 @@ def fetch_issues_concurrently(jira, project_key: str, start_range, end_range, ma
                                range(start_range, end_range)}
         for future in concurrent.futures.as_completed(future_to_issue_key):
             issue = future.result()
-            if issue:
-                issues_list.append(issue)
+            issues_list.append(issue)
 
     # Sort the issues_list based on the issue key
     # Later we will sort alphabetically + numerically (primarily by alphabet) by issue key
-    issues_list.sort(key=lambda x: x['key'])
+    #issues_list.sort(key=lambda x: x['key'])
 
     # ---- DEBUG ----
     print("\n\n------- DEBUG VERBOSE OUTPUT -------\n\n")
     for issue in issues_list:
-        issue_key = issue.get('key', 'No Key Found')
-        summary = issue['fields'].get('summary', 'No Summary Found')
-        status = issue['fields']['status'].get('name', 'No Status Found')
-        # Attempt to print some changelog information for debugging
-        if 'changelog' in issue:
-            print(
-                f"Issue Key: {issue_key}, Summary: {summary}, Status: {status}, Changelog Entries: "
-                f"{len(issue['changelog']['histories'])}")
-        else:
-            print(f"Issue Key: {issue_key}, Summary: {summary}, Status: {status}, Changelog: Not Retrieved")
-    # ---- END DEBUG ----
+        if issue:
+            issue_key = issue.get('key', 'No Key Found')
+            summary = issue['fields'].get('summary', 'No Summary Found')
+            status = issue['fields']['status'].get('name', 'No Status Found')
+            # Attempt to print some changelog information for debugging
+            if 'changelog' in issue:
+                print(
+                    f"Issue Key: {issue_key}, Summary: {summary}, Status: {status}, Changelog Entries: "
+                    f"{len(issue['changelog']['histories'])}")
+            else:
+                print(f"Issue Key: {issue_key}, Summary: {summary}, Status: {status}, Changelog: Not Retrieved")
+        # ---- END DEBUG ----
 
     return issues_list
 
@@ -257,7 +257,7 @@ def write_issues_to_csv(jira, project_key, issues_list, filename, lock, barrier)
     print(f"Starting to write data to {filename}...")
     with open(f"{project_key}_configs.json", "r") as json_file:
             configs = json.load(json_file)
-    if int(current_process().name[8:]) % CPU_COUNT == 0:
+    if int(current_process().name[8:]) % CPU_COUNT == 1:
         # Headers for the CSV file
         
         headers = []
@@ -484,21 +484,20 @@ def write_issues_to_csv(jira, project_key, issues_list, filename, lock, barrier)
                         row.append(safe_str(eval(f'issue{header}')))
                     except Exception as e:
                         row.append("")
-            with lock: 
-                with open(filename, 'a', newline='', encoding='utf-8') as csvfile:
-                    csv_writer = csv.writer(csvfile)
-                    csv_writer.writerow(row)
+            rows.append(row)
+        else:
+            rows.append(["Deleted"] * len(configs))
         
     # Sort the rows based on the Sort_ID column (first column) in ascending order
     # We will fix this sorting to be Alphabetical+numerical based on issue key later
-    sorted_rows = sorted(rows, key=lambda x: x[0])
+    #sorted_rows = sorted(rows, key=lambda x: x[3])
 
     # Write the sorted rows to the CSV file
-    """with lock:
+    with lock:
         with open(filename, 'a', newline='', encoding='utf-8') as csvfile:
             csv_writer = csv.writer(csvfile)
-            csv_writer.writerows(sorted_rows)"""
-    print(f"Data successfully written to {filename}")
+            csv_writer.writerows(rows)
+    
 
 
 def process_tickets(url: str, username: str, token: str, project_key: str, start_range, end_range, filename: str, lock, barrier):
