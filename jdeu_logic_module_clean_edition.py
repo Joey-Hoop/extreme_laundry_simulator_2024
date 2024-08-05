@@ -40,14 +40,16 @@ def extract_keys(d, parent_key=''):
     """
     keys = []
     for k, v in d.items():
-        full_key = f"{parent_key}.{k}" if parent_key else k
-        keys.append(full_key)
+        full_key = f"{parent_key}[\"{k}\"]" if parent_key else f"[\"{k}\"]"
+        
         if isinstance(v, dict):
             keys.extend(extract_keys(v, full_key))
         elif isinstance(v, list):
             for i, item in enumerate(v):
                 if isinstance(item, dict):
                     keys.extend(extract_keys(item, f"{full_key}[{i}]"))
+        else:
+            keys.append(full_key)
     return keys
 
 def make_configs_file(project_key, ticket):
@@ -79,9 +81,9 @@ def safe_str(obj):
     str: String representation of the object
     """
     try:
-        return str(obj)
+        return str(obj).replace('\n','').replace('\r','')
     except UnicodeEncodeError:
-        return obj.encode('ascii', 'replace').decode('ascii')
+        return str(obj.encode('ascii', 'replace').decode('ascii')).replace('\n','').replace('\r','')
 
 
 def convert_time_to_seconds(time_str) -> int:
@@ -130,7 +132,7 @@ def fetch_latest_ticket(jira, project_key: str):
     project_key (str): The project key from the user input
 
     Returns:
-    None
+    None, if no response OR ticket (JIRA Object) if fetch is successful
     """
     jql_query = f'project = {project_key} ORDER BY created DESC'
     try:
@@ -236,12 +238,13 @@ def calculate_working_hours(start_date: datetime, end_date: datetime) -> int:
     return weekdays * 8  # Assuming 8 working hours per day
 
 
-def write_issues_to_csv(jira, issues_list, filename, lock, barrier):
+def write_issues_to_csv(jira, project_key, issues_list, filename, lock, barrier):
     """
     This function writes a list of jira values into a CSV file
 
     Parameters:
     jira (Jira): Connected Jira object
+    project_key: String containing the name of the project being used
     issues_list (list): List of jira values containing issues
     filename (str): targeted CSV file where issues will be written
     lock (Lock): A lock for parallel processing so no two processors access a critical section at the same time
@@ -250,15 +253,9 @@ def write_issues_to_csv(jira, issues_list, filename, lock, barrier):
     Returns:
     None
     """
-    # Find the highest number of labels out of all the issues
-    max_labels = 0
-    for issue in issues_list:
-        labels = issue['fields'].get('labels', [])
-        if len(labels) > max_labels:
-            max_labels = len(labels)
 
     print(f"Starting to write data to {filename}...")
-    with open("configs.json", "r") as json_file:
+    with open(f"{project_key}_configs.json", "r") as json_file:
             configs = json.load(json_file)
     if int(current_process().name[8:]) % CPU_COUNT == 0:
         # Headers for the CSV file
@@ -268,33 +265,33 @@ def write_issues_to_csv(jira, issues_list, filename, lock, barrier):
             if configs[header]:
                 headers.append(header)
 
-        # Append label headers
-        if configs["Labels"]:
-            label_headers = [f'Label {i + 1}' for i in range(max_labels)]
-            headers.extend(label_headers)
-
         print(f"\nStrap in, here we go...\n")
         with lock:
             with open(filename, 'a', newline='', encoding='utf-8') as csvfile:
-                csv_writer = csv.DictWriter(csvfile, delimiter=",", fieldnames=headers)
+                csv_writer = csv.DictWriter(csvfile, delimiter=",", fieldnames=headers, quoting=csv.QUOTE_MINIMAL)
                 csv_writer.writeheader()
 
         print(f"\nCSV Headers: {headers}\n")
     print("\n" + str(current_process()) + " Before Barrier")
     barrier.wait()
     print("\n" + str(current_process()) + " After Barrier")
+    
     rows = []  # Create a list to store all the rows
-
+    
     for index, issue in enumerate(issues_list, start=1):
+        '''    
         lock.acquire()
         try:
             print(f"\nProcessing issue {issue['key']}...\n")
         finally:
             lock.release()
-
+        
         sort_id = str(index).zfill(8)  # Pad the sort_id with leading zeros to ensure a consistent length
         issue_key = issue['key']
         summary = issue['fields']['summary']
+        {
+            "summary": [issue['fields']['summary']]
+        }
         status = issue['fields']['status']['name']
         # Extract priority information, assuming it's stored under 'priority' in the issue fields
         priority = issue['fields'].get('priority', {}).get('name', 'N/A')  # Default to 'N/A' if not available
@@ -400,8 +397,6 @@ def write_issues_to_csv(jira, issues_list, filename, lock, barrier):
                         faulty_nci = "Yes"
 
                 labels = issue['fields'].get('labels', [])
-                # Prepare label fields: Fill in labels and add empty strings for missing labels
-                label_fields = labels + [''] * (max_labels - len(labels))
 
                 row = [
                             sort_id, safe_str(issue_key), safe_str(summary), safe_str(status), safe_str(priority),
@@ -437,8 +432,7 @@ def write_issues_to_csv(jira, issues_list, filename, lock, barrier):
                         ]
                 
                 row[:] = [column for config, column in zip(configs, row) if configs[config]]
-                if configs["Labels"]:
-                    row.extend(label_fields)
+
                 rows.append(row)  # Append each row to the rows list
 
                 print(Style.BRIGHT + Fore.GREEN + f"\nWriting to CSV: {row}\n")  # Print each row as it's written
@@ -477,20 +471,33 @@ def write_issues_to_csv(jira, issues_list, filename, lock, barrier):
                     ]
             
             row[:] = [column for config, column in zip(configs, row) if configs[config]]
-            if configs["Labels"]:
-                    row.extend([''] * max_labels)
+
             rows.append(row)  # Append each row to the rows list
             print(Style.BRIGHT + Fore.GREEN + f"\nWriting to CSV: {row}\n")  # Print for issues without worklogs
-
+        '''
+        
+        if issue:
+            row = []
+            for header in configs:
+                if configs[header]:
+                    try:
+                        row.append(safe_str(eval(f'issue{header}')))
+                    except Exception as e:
+                        row.append("")
+            with lock: 
+                with open(filename, 'a', newline='', encoding='utf-8') as csvfile:
+                    csv_writer = csv.writer(csvfile)
+                    csv_writer.writerow(row)
+        
     # Sort the rows based on the Sort_ID column (first column) in ascending order
     # We will fix this sorting to be Alphabetical+numerical based on issue key later
     sorted_rows = sorted(rows, key=lambda x: x[0])
 
     # Write the sorted rows to the CSV file
-    with lock:
+    """with lock:
         with open(filename, 'a', newline='', encoding='utf-8') as csvfile:
             csv_writer = csv.writer(csvfile)
-            csv_writer.writerows(sorted_rows)
+            csv_writer.writerows(sorted_rows)"""
     print(f"Data successfully written to {filename}")
 
 
@@ -534,7 +541,7 @@ def process_tickets(url: str, username: str, token: str, project_key: str, start
         print(Style.BRIGHT + Fore.RED + "[ !!! THIS IS GOING TO TAKE A WHILE !!! ]" + Style.RESET_ALL)
         print(Style.BRIGHT + Fore.RED + "[ !!! -- DO NOT CLOSE THIS WINDOW -- !!! ]" + Style.RESET_ALL)
 
-    write_issues_to_csv(jira, issues_list, filename, lock, barrier)
+    write_issues_to_csv(jira, project_key, issues_list, filename, lock, barrier)
 
     print(f"Data written to {filename}")
 

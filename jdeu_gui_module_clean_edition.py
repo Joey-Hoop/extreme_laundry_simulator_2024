@@ -1,6 +1,6 @@
 """
 <h1>jdeu_gui_module</h1>
-<h2>Extreme Laundry Simulator (Don't laugh at me, I know this is a temporary name)>
+<h2>Extreme Laundry Simulator (Don't laugh at me, I know this is a temporary name)</h2>
 <h3>IEW&S<h3>
 <p>
 The jdeu_gui_module file creates an interface for the user to input
@@ -108,7 +108,10 @@ if __name__ == '__main__':
             save_configs(project_key, configs)
         else:
             #This appens if they don't click scan on a new project
-            print("Make the configs file")
+            jira = Jira(url=url_entry.get(), username=username_entry.get(),
+                    token=token_entry.get())
+            ticket = jdeu_logic_module_clean_edition.fetch_latest_ticket(jira, project_key_entry.get())
+            jdeu_logic_module_clean_edition.make_configs_file(project_key_entry.get(),ticket)
 
         threading.Thread(target=process_tickets_thread,
                          args=(url, username, token, project_key, start_range, end_range),
@@ -228,7 +231,7 @@ if __name__ == '__main__':
     config_booleans = []
     button_frames = []
     config_buttons = []
-    NUM_BUTTON_COlUMNS = 3
+    NUM_BUTTON_COlUMNS = 2
     for i in range(NUM_BUTTON_COlUMNS):
         button_frames.append(tk.Frame(checkbuttons_frame))
         button_frames[i].pack(side="left", fill="y")
@@ -271,14 +274,12 @@ if __name__ == '__main__':
                 configBool.set(not(configBool.get()))
             else:
                 configBool.set(False)
-            if configBool.get() and end:
+            if configBool.get() and ticket:
                 start_range_entry.delete(0, tk.END)
                 start_range_entry.insert(0, "0")
                 end_range_entry.delete(0,tk.END)
                 end_range_entry.insert(0,end)
                 
-            if not scanned_bool.get() and end:
-                scanned_bool.set(True)
                 if not os.path.isfile(f"{project_key_entry.get()}_configs.json"):
                     jdeu_logic_module_clean_edition.make_configs_file(project_key_entry.get(),ticket) 
 
@@ -305,7 +306,6 @@ if __name__ == '__main__':
                 button.pack_forget()
 
     configBool = tk.BooleanVar(value=False)
-    scanned_bool = tk.BooleanVar(value=False)
     scan_button = tk.Button(entry_frame, text="Scan And Configure", command=scan_button_click)
     scan_button.pack(pady=2)
     
